@@ -1,29 +1,31 @@
 name: CI # Just a label that we see in the Actions tab on GitHub. We can rename it if we want, but "CI" is a common convention for continuous integration workflows.
 
 on: # indicates when this workflow runs
-  push:
-    branches: [ main ] # We specify that it runs when we push directly to the main branch. We can add other branches if we want, but for now, we only want to run this workflow when we push to main.
-  pull_request:
-    branches: [ main ] # We specify that it also runs when we open a new PR targetting the main branch, as well as when we push new commits to that PR.
+    push:
+        branches: [main] # We specify that it runs when we push directly to the main branch. We can add other branches if we want, but for now, we only want to run this workflow when we push to main.
+    pull_request:
+        branches: [main] # We specify that it also runs when we open a new PR targetting the main branch, as well as when we push new commits to that PR.
 
 jobs: # A workflow can have multiple jobs, like lint, test, or build.
-  build-and-test: # this is just the name of this job.
-    runs-on: ubuntu-latest # This specifies the type of virtual machine to use for this job. we specified ubuntu-latest so GitHub gives us fresh ubuntu machine on each run.
+    build-and-test: # this is just the name of this job.
+        runs-on: ubuntu-latest # This specifies the type of virtual machine to use for this job. we specified ubuntu-latest so GitHub gives us fresh ubuntu machine on each run.
 
-    steps: # The workflow's tasks specified steps. Each step is either a shell script that runs commands or an action that we can use to perform a task.
-      - name: Check out code # This step pulls our code from the repo to the Virtual machine.
-        uses: actions/checkout@v6 # We enter the gitHub action that helps us do the. It's just a prebuilt bundle of workflow steps to perform this task for us  
+        steps: # The workflow's tasks specified steps. Each step is either a shell script that runs commands or an action that we can use to perform a task.
+            - name: Check out code # This step pulls our code from the repo to the Virtual machine.
+              uses: actions/checkout@v6 # We enter the gitHub action that helps us do the. It's just a prebuilt bundle of workflow steps to perform this task for us
 
-      - name: Use Node.js # This step installs Node.js version 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
+            - name: Use Node.js # This step installs Node.js version 24
+              uses: actions/setup-node@v6
+              with:
+                  node-version: '24'
 
-      - name: Install dependencies # Here we install our dependencies using npm ci. This is a command that installs dependencies based on the package-lock.json file, ensuring that we get the exact same versions of dependencies as specified in that file.
-        run: npm ci
+            - name: Install dependencies # Here we install our dependencies using npm ci. This is a command that installs dependencies based on the package-lock.json file, ensuring that we get the exact same versions of dependencies as specified in that file.
+              run: npm ci
 
-      - name: Run tests # This final step runs the automated tests.
-        run: npm test
+            - name: Check formatting
+              run: npm run format:check
 
+            - name: Run tests # This final step runs the automated tests.
+              run: npm test
 
-# If npm test exists with a non-zero exit code, the workflow will fail, and we'll see a red X in the Actions tab on GitHub. If it exits with a zero exit code, the workflow will succeed, and we'll see a green checkmark. 
+# If npm test exists with a non-zero exit code, the workflow will fail, and we'll see a red X in the Actions tab on GitHub. If it exits with a zero exit code, the workflow will succeed, and we'll see a green checkmark.
