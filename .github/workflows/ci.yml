@@ -25,6 +25,9 @@ jobs: # A workflow can have multiple jobs, like lint, test, or build.
             - name: Check formatting
               run: npm run format:check
 
+            - name: Check linting
+              run: npm run lint
+
             - name: Run tests # This final step runs the automated tests.
               run: npm test
 
