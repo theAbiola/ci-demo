@@ -1,34 +1,58 @@
 name: CI # Just a label that we see in the Actions tab on GitHub. We can rename it if we want, but "CI" is a common convention for continuous integration workflows.
 
 on: # indicates when this workflow runs
-    push:
-        branches: [main] # We specify that it runs when we push directly to the main branch. We can add other branches if we want, but for now, we only want to run this workflow when we push to main.
-    pull_request:
-        branches: [main] # We specify that it also runs when we open a new PR targetting the main branch, as well as when we push new commits to that PR.
+  push:
+    branches: [main] # We specify that it runs when we push directly to the main branch. We can add other branches if we want, but for now, we only want to run this workflow when we push to main.
+  pull_request:
+    branches: [main] # We specify that it also runs when we open a new PR targetting the main branch, as well as when we push new commits to that PR.
 
 jobs: # A workflow can have multiple jobs, like lint, test, or build.
-    build-and-test: # this is just the name of this job.
-        runs-on: ubuntu-latest # This specifies the type of virtual machine to use for this job. we specified ubuntu-latest so GitHub gives us fresh ubuntu machine on each run.
+  build-and-test: # this is the name of this first job.
+    runs-on: ubuntu-latest # This specifies the type of virtual machine to use for this job. we specified ubuntu-latest so GitHub gives us fresh ubuntu machine on each run.
 
-        steps: # The workflow's tasks specified steps. Each step is either a shell script that runs commands or an action that we can use to perform a task.
-            - name: Check out code # This step pulls our code from the repo to the Virtual machine.
-              uses: actions/checkout@v6 # We enter the gitHub action that helps us do the. It's just a prebuilt bundle of workflow steps to perform this task for us
+    steps: # The workflow's tasks specified as steps. Each step is either a shell script that runs commands or an action that we can use to perform a task.
+      - name: Check out code # This step pulls our code from the repo to the Virtual machine.
+        uses: actions/checkout@v6 # We enter the gitHub action that helps us do the. It's just a prebuilt bundle of workflow steps to perform this task for us
 
-            - name: Use Node.js # This step installs Node.js version 24
-              uses: actions/setup-node@v6
-              with:
-                  node-version: '24'
+      - name: Use Node.js # this step installs Node.js version 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
 
-            - name: Install dependencies # Here we install our dependencies using npm ci. This is a command that installs dependencies based on the package-lock.json file, ensuring that we get the exact same versions of dependencies as specified in that file.
-              run: npm ci
+      - name: Install dependencies # this step installs our dependencies using npm ci. This is a command that installs dependencies based on the package-lock.json file.
+        run: npm ci
 
-            - name: Check formatting
-              run: npm run format:check
+      - name: Check formatting
+        run: npm run format:check
 
-            - name: Check linting
-              run: npm run lint
+      - name: Check linting
+        run: npm run lint
 
-            - name: Run tests # This final step runs the automated tests.
-              run: npm test
+      - name: Run tests # this final step runs the automated tests.
+        run: npm test
 
-# If npm test exists with a non-zero exit code, the workflow will fail, and we'll see a red X in the Actions tab on GitHub. If it exits with a zero exit code, the workflow will succeed, and we'll see a green checkmark.
+  build-and-push: # this is another job that we created so we can have a clean Workflow dedicated to building and pushing the Docker Image to Docker Hub
+    runs-on: ubuntu-latest
+    needs: build-and-test # shows that the build-and-test job must pass before this job can start. the if statement below shows that the job runs only after the PR is merged
+    if: github.event_name == 'push'
+    steps:
+      - name: Check out code # this step checks our code with the official docker action
+        uses: actions/checkout@v6
+
+      - name: Login to Docker Hub # this step lets us login to docker with our docker username and personal access token. the docker username isn't sensitive so we store it as a variable, but the docker access token is sensitive so we have to store it as a github secret
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image # this step builds and pushes the docker image to docker hub using the official build and push action. We set context to the root folder with the `.` Setting push to true means the docker image would get pushed to Dockerhub, if we set it to false, the image would only be kept on the github runner after it is built.
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ vars.DOCKERHUB_USERNAME }}/ci-demo:latest
+            ${{ vars.DOCKERHUB_USERNAME }}/ci-demo:${{ github.sha }}
+        # tags are how we reference and pull specific versions of the image. tags need to follow docker's naming format like username/image_name/tag
+        # for the image_name, it is common to use the repo name. The tag is often used to define the version of the build
+        # the github.sha is just an ID for the code that was built in this particular run. it gives us a unique tag that we can use later to pull the build

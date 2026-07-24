@@ -2,7 +2,7 @@ const app = require('./app');
 
 const PORT = 3000;
 
-app.listen(PORT, () => {
-    // eslint-disable-next-line no-console
-    console.log(`Server listening on port ${PORT}!`);
+app.listen(PORT, '0.0.0.0', () => {
+  // eslint-disable-next-line no-console
+  console.log(`Server listening on port ${PORT}!`);
 });
